@@ -30,7 +30,7 @@ class Mario:
     IMGS = MARIO_IMGS
     #MAX_ROTATION = 0  # how much the mario is going to tilt
     #ROT_VEL = 0 # how much we're going to rotate the mario in each frame every time we move the mario
-    ANIMATION_TIME = 5  # how fast the mario is going to flap its wings
+    ANIMATION_TIME = 5 # how fast the mario is going to flap its wings
 
     # starting position of mario
     def __init__(self, x, y):
@@ -186,7 +186,7 @@ def draw_window(window, marios, goombas, base, score, gen):
 
     for goomba in goombas:
         goomba.draw(window)
-        time.sleep(2)
+        #time.sleep(2)
     text = STAT_FONT.render("Score: " + str(score), 1, (255, 255, 255))
     window.blit(text, (WIN_WIDTH - 10 - text.get_width(), 10))
 
@@ -228,6 +228,7 @@ def main(genomes, config):
     base = Base(730)
     goombas = [Goomba(600, 250)]
     window = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
+    pygame.display.set_caption('MarioAI')
     clock = pygame.time.Clock()
 
     score = 0
