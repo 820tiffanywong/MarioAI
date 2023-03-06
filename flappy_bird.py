@@ -26,11 +26,18 @@ STAT_FONT = pygame.font.SysFont("comicsans", 50)
 
 # MARIO class, mario moving
 class Mario:
+
     # constants
     IMGS = MARIO_IMGS
-    #MAX_ROTATION = 0  # how much the mario is going to tilt
-    #ROT_VEL = 0 # how much we're going to rotate the mario in each frame every time we move the mario
-    ANIMATION_TIME = 5 # how fast the mario is going to flap its wings
+
+    # how much the mario is going to tilt
+    #MAX_ROTATION = 0
+
+    # how much we're going to rotate the mario in each frame every time we move the mario
+    #ROT_VEL = 0
+
+    # how fast the mario is going to flap its wings
+    ANIMATION_TIME = 5
 
     # starting position of mario
     def __init__(self, x, y):
@@ -50,6 +57,7 @@ class Mario:
 
     # every single frame to move our mario
     def move(self):
+
         # 30 frames per sec
         self.tick_count += 1
 
@@ -65,6 +73,7 @@ class Mario:
             self.img = self.IMGS[2]
         elif self.img_count < self.ANIMATION_TIME * 4:
             self.img = self.IMGS[1]
+
         # then 1st image is shown and image count is RESET
         elif self.img_count < self.ANIMATION_TIME * 4 + 1:
             self.img = self.IMGS[0]
@@ -102,18 +111,19 @@ class Goomba:
         self.tick_count = 0
         self.vel = 2
 
-
         self.bottom = 680
         self.img_count = 0
-        self.img = self.IMGS[0]  # references mario IMGS and IMGS[0] is mario_IMGS[0] is mario1.png
+
+        # references mario IMGS and IMGS[0] is mario_IMGS[0] is mario1.png
+        self.img = self.IMGS[0]
         self.passed = False
         self.set_height()
 
     def set_height(self):
         self.height = 50
+
     def move(self):
         # 30 frames per sec
-
         self.tick_count += 8
         self.x -= self.vel
 
@@ -186,7 +196,7 @@ def draw_window(window, marios, goombas, base, score, gen):
 
     for goomba in goombas:
         goomba.draw(window)
-        #time.sleep(2)
+
     text = STAT_FONT.render("Score: " + str(score), 1, (255, 255, 255))
     window.blit(text, (WIN_WIDTH - 10 - text.get_width(), 10))
 
@@ -199,7 +209,9 @@ def draw_window(window, marios, goombas, base, score, gen):
 
 
 def main(genomes, config):
-    # mario = mario(230, 350) # this is only for checking one mario at a time
+
+    # this is only for checking one mario at a time
+    # mario = mario(230, 350)
 
     # Need to keep track of the neural network that controls each mario
     # because these genomes coming in are just a bunch of neural networks
@@ -216,12 +228,14 @@ def main(genomes, config):
     ge = []
     marios = []
     # 3 lists so each position aka INDEX will correspond to the same mario's information
+
     # nets[0] = ge[0] = marios[0]
-    for __, g in genomes:  # genomes ia tupple that has genome ID and object
+    for __, g in genomes:  # genomes ia tuple that has genome ID and object
         # (1, ge) but we only want genome object so loop has to have "__," to avoid errors
         net = neat.nn.FeedForwardNetwork.create(g, config)
         nets.append(net)
-        marios.append(Mario(230, 350))  # standard mario object that will start at the same position of all the other mario objects
+        # standard mario object that will start at the same position of all the other mario objects
+        marios.append(Mario(230, 350))
         #goombas = [Goomba(10, 50)] * 10
         g.fitness = 0
         ge.append(g)
@@ -252,6 +266,7 @@ def main(genomes, config):
             # no marios left, so quit game
             run = False
             break
+
         for x, mario in enumerate(marios):
             mario.move()
             ge[x].fitness += 0.1
@@ -259,6 +274,7 @@ def main(genomes, config):
             # then checks if that output is greater than 0.5 & if yes then mario jumps
             output = nets[x].activate((mario.y, abs(mario.y - goombas[goomba_ind].height), abs(mario.y - goombas[goomba_ind].bottom)))
             # output = nets[x].activate((mario.y, abs(mario.y - pipes[pipe_ind].height), abs(mario.y - pipes[pipe_ind].bottom)))
+
             # find distance between top pipe and mario & distance between bottom pipe and mario
             if output[0] > 0.5:  # output is a list & we r returning one output neuron for each example
                 mario.jump()
@@ -274,7 +290,7 @@ def main(genomes, config):
                     marios.pop(x)
                     nets.pop(x)
                     ge.pop(x)
-            #         # everytine a mario hits a pipe, it's going to have 1 removed from its fitness score
+            #         # every time a mario hits a pipe, it's going to have 1 removed from its fitness score
             #     # if the marios passed the pipe then this if statement is used
                 if not goomba.passed and goomba.x < mario.x:
                     goomba.passed = True
@@ -332,4 +348,3 @@ if __name__ == "__main__":
     local_dir = os.path.dirname(__file__)
     config_path = os.path.join(local_dir, "config-feedforward.txt")
     run(config_path)
-    # print('hhh')
