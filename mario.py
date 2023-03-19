@@ -1,9 +1,12 @@
-import pygame
+import math
 import os
 import random
 import time
 import neat
+import numpy as np
 from PIL import Image
+import pygame
+
 
 pygame.font.init()
 
@@ -23,6 +26,14 @@ BASE_IMG = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs", "mari
 BG_IMG = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs", "mariobg.jpeg")))
 STAT_FONT = pygame.font.SysFont("comicsans", 50)
 
+#jump_sound = pygame.mixer.Sound("jump.wav")
+jump_sound = 'jump.mp3'
+pygame.init()
+pygame.mixer.init()
+pygame.mixer.music.load(jump_sound)
+
+#pygame.event.wait()
+
 
 # MARIO class, mario moving
 class Mario:
@@ -30,36 +41,65 @@ class Mario:
     # constants
     IMGS = MARIO_IMGS
 
-    # how much the mario is going to tilt
-    #MAX_ROTATION = 0
-
-    # how much we're going to rotate the mario in each frame every time we move the mario
-    #ROT_VEL = 0
-
     # how fast the mario is going to flap its wings
     ANIMATION_TIME = 5
 
+    MAX_JUMP_COUNT = 10
+    JUMP_VEL = 18
+
     # starting position of mario
     def __init__(self, x, y):
-        self.x = 120
-        self.y = 680
+
+        self.x = x
+        self.y = y
         self.tilt = 0
         self.tick_count = 0  # physics of mario
-        self.vel = 0
+        self.vel = 5
         self.height = self.y
         self.img_count = 0
         self.img = self.IMGS[0]
+        self.jump_count = 10
+        self.isJump = False
+        self.isRun = True
+        self.alive = True
+        self.rect = self.img.get_rect()
+        #self.rect = pygame.Rect(self.x, self.y, self.img.get_width(), self.img.get_height())
 
     def jump(self):
-        self.vel = 2
-        self.tick_count = 0
-        self.height = self.y
+        if self.jump_count == 10:
+            #jump_sound.play()
+            pygame.mixer.music.play()
+        self.jump_count -= 1
+        self.y -= (self.jump_count * abs(self.jump_count)) * 0.5
+        # if self.jumpCount < self.MAX_JUMP_COUNT:
+        #     self.vel = -self.JUMP_VEL
+        #     self.jumpCount += 1
+    #`````````````````````````````````
+        # if self.isJump:
+        #     if self.jumpCount >= -10:
+        #         neg = 1
+        #         if self.jumpCount < 0:
+        #             neg = -1
+        #         self.y -= self.jumpCount ** 2 * 0.1 * neg
+        #         self.jumpCount -= 1
+        #     else:
+        #         self.isJump = False
+        #         self.jumpCount = 10
+
+        # if self.jump:
+        #     self.mario.y -= self.jump_speed * 4
+        #     self.jump_speed -= 0.5
+        # if self.jump_speed <= -self.jump_speed:
+        #     self.jump = False
+        #     self.isRun = True
+        #     self.jump_speed = self.jump_speed
 
     # every single frame to move our mario
+
     def move(self):
 
-        # 30 frames per sec
         self.tick_count += 1
+
 
     def draw(self, window):
 
@@ -90,11 +130,15 @@ class Mario:
         new_rect = rotated_image.get_rect(center=self.img.get_rect(topleft=(self.x, self.y)).center)
         window.blit(rotated_image, new_rect.topleft)
 
+    def mario_rect(self):
+        mario_rect = self.img.get_rect()
+
     def get_mask(self):
         return pygame.mask.from_surface(self.img)
 
 
 class Goomba:
+
     IMGS = GOOMBAS_IMGS
     MAX_ROTATION = 0
     ROT_VEL = 20
@@ -102,20 +146,18 @@ class Goomba:
 
     def __init__(self, x, y):
 
-        self.x = 400
+        self.x = x
         self.y = y
-
         self.height = 0
-
         self.tilt = 0
         self.tick_count = 0
-        self.vel = 2
-
+        self.vel = 7
         self.bottom = 680
         self.img_count = 0
 
         # references mario IMGS and IMGS[0] is mario_IMGS[0] is mario1.png
         self.img = self.IMGS[0]
+        self.rect = self.img.get_rect()
         self.passed = False
         self.set_height()
 
@@ -124,7 +166,7 @@ class Goomba:
 
     def move(self):
         # 30 frames per sec
-        self.tick_count += 8
+        self.tick_count += 1
         self.x -= self.vel
 
     def draw(self, win):
@@ -150,21 +192,28 @@ class Goomba:
             self.img = self.IMGS[1]
             self.img_count = self.ANIMATION_TIME * 2
 
-        win.blit(self.img, (self.x, self.bottom))
+        #win.blit(self.img, (self.x, self.bottom))
+        win.blit(self.img, (self.x, self.y))
+
+    def goombarect(self):
+        goomba_rect = self.img.get_rect()
 
     def collide(self, mario):
+
         mario_mask = mario.get_mask()
         goomba_mask = pygame.mask.from_surface(self.img)
+        #print(self.rect.x, mario.rect.x)
 
-        offset = (self.x - mario.x, self.y - round(mario.y))
+        # TODO currently returning (0,0), which causes a collision
+        offset = (round(mario.x - self.x), round(self.y - mario.y))
+        # offset = (int(self.rect.x - mario.rect.x), int(self.rect.y - mario.rect.y))
+        #print(offset)
 
-        # point of collision or overlap between the bird mask and the bottom pipe which is the bottom_offset
-        # if it doesn't collide, it returns NONE ---- point of intersection
+        # get the overlap between the two masks at the given offset
+        collision = goomba_mask.overlap(mario_mask, offset)
+        #collision = mario_mask.overlap(goomba_mask, offset)
 
-        point = mario_mask.overlap(goomba_mask, offset)
-        if point:
-            return True
-        return False
+        return collision
 
 
 class Base:
@@ -202,48 +251,51 @@ def draw_window(window, marios, goombas, base, score, gen):
 
     text = STAT_FONT.render("Gen: " + str(gen), 1, (255, 255, 255))
     window.blit(text, (10, 10))
+
+    text = STAT_FONT.render("Fitness: " + str(gen), 1, (255, 255, 255))
+    window.blit(text, (10, 70))
+
     base.draw(window)
     for mario in marios:
         mario.draw(window)
     pygame.display.update()
 
 
+clock = pygame.time.Clock()
+
+
 def main(genomes, config):
 
-    # this is only for checking one mario at a time
-    # mario = mario(230, 350)
-
-    # Need to keep track of the neural network that controls each mario
-    # because these genomes coming in are just a bunch of neural networks
-    # that control each of our marios
-
-    # Need to keep track of the mario that neural networks controlling
-    # & where that position is in the screen
-
-    # Need to keep track of our genomes so I can change their fitness based on how
-    # far they moved or if they hit a pipe
     global GEN
+
     GEN += 1
     nets = []
     ge = []
     marios = []
-    # 3 lists so each position aka INDEX will correspond to the same mario's information
+    mario = Mario(100, 680)
+    goomba = Goomba(500, 680)
+    mario_y = 680
 
+    distanceMarGoom = abs(mario.rect.centerx - goomba.rect.centerx) / WIN_WIDTH
+    player_bottom_y = mario.rect.bottom / WIN_HEIGHT
+    player_top_y = mario.rect.top / WIN_HEIGHT
+
+    # 3 lists so each position aka INDEX will correspond to the same mario's information
+    goombaAI = Goomba(400, 600)
     # nets[0] = ge[0] = marios[0]
+    jumpCount = 10
     for __, g in genomes:  # genomes ia tuple that has genome ID and object
         # (1, ge) but we only want genome object so loop has to have "__," to avoid errors
         net = neat.nn.FeedForwardNetwork.create(g, config)
         nets.append(net)
-        # standard mario object that will start at the same position of all the other mario objects
-        marios.append(Mario(230, 350))
-        #goombas = [Goomba(10, 50)] * 10
+        marios.append(Mario(100, 680))
         g.fitness = 0
         ge.append(g)
+
     base = Base(730)
-    goombas = [Goomba(600, 250)]
+    goombas = [Goomba(500, 680)]
     window = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
     pygame.display.set_caption('MarioAI')
-    clock = pygame.time.Clock()
 
     score = 0
     run = True
@@ -257,54 +309,74 @@ def main(genomes, config):
                 quit()
 
         goomba_ind = 0
+
         # if the len of the mario is not 0, we don't need to look at it
         if len(marios) > 0:
             if len(goombas) > 1 and marios[0].x > goombas[0].x + goombas[0].img.get_width():
                 goomba_ind = 1
                 # setting pipe index to 0 because the pipe that is looked at is the input to the neural network
         else:
-            # no marios left, so quit game
             run = False
             break
-
+        previous_jump = time.time()
         for x, mario in enumerate(marios):
             mario.move()
             ge[x].fitness += 0.1
-            # pass values to a neural network so the mario + the associated neural network get its output value
-            # then checks if that output is greater than 0.5 & if yes then mario jumps
-            output = nets[x].activate((mario.y, abs(mario.y - goombas[goomba_ind].height), abs(mario.y - goombas[goomba_ind].bottom)))
-            # output = nets[x].activate((mario.y, abs(mario.y - pipes[pipe_ind].height), abs(mario.y - pipes[pipe_ind].bottom)))
+            #print(time.time() - previous_time)
 
-            # find distance between top pipe and mario & distance between bottom pipe and mario
-            if output[0] > 0.5:  # output is a list & we r returning one output neuron for each example
+            if round(time.time() - previous_jump, 2) == round(np.random.uniform(), 2):
+                #if np.random.choice(3) == 1:
                 mario.jump()
+                #    previous_jump = time.time()
+            #input = (mario.y, goombas[goomba_ind].x, goombas[goomba_ind].x)
+            #THIS WORKS KIND OF
+            #input = (mario.y, abs(mario.y - goombas[goomba_ind].y), abs(mario.y - goombas[goomba_ind].x))
+            #input = (mario.y, mario.x, distanceMarGoom)
+            input = (distanceMarGoom, player_bottom_y, player_top_y)
+
+            output = nets[x].activate(input)
+
         rem = []
         add_goomba = False
 
         for x, goomba in enumerate(goombas):
-            # for every mario, check if each mario collides with the pipe
-            # enumerating to get the position in the list of where the mario is as well
+            goomba.move()
             for x, mario in enumerate(marios):
+                # if pygame.sprite.collide_rect(mario, goomba):
+                #     ge[x].fitness -= 1
+                #     run = False
+                #     marios.pop(x)
+                #     ge.pop(x)
+                # else:
+                #     ge[x].fitness += 0.1
+                #     if goomba.rect.right < 0:
+                #         score += 1
+                #         goomba.reset()
+                #````````````````````````
+
                 if goomba.collide(mario):
+                    print('COLLISION')
                     ge[x].fitness -= 1
                     marios.pop(x)
                     nets.pop(x)
                     ge.pop(x)
-            #         # every time a mario hits a pipe, it's going to have 1 removed from its fitness score
-            #     # if the marios passed the pipe then this if statement is used
+            # every time a mario hits a pipe, it's going to have 1 removed from its fitness score
+            # if the marios passed the pipe then this if statement is used
                 if not goomba.passed and goomba.x < mario.x:
                     goomba.passed = True
                     add_goomba = True
             # the pipe is removed outside the loop because it is only one pipe we're removing
-            #if goomba.x + goomba.PIPE_TOP.get_width() < 0:
             if goomba.x + goomba.img.get_width() < 0:
                 rem.append(goomba)
-            goomba.move()
+
+            if goomba.x < mario.x < goomba.x + 50 and mario.y < goomba.y:
+                g.fitness += 1
+
         if add_goomba:
             score += 1
             for g in ge:
-                g.fitness += 5
-            goombas.append(Goomba(600, 250))
+                g.fitness += 3
+            goombas.append(Goomba(500, 680))
 
         for r in rem:
             goombas.remove(r)
@@ -312,7 +384,7 @@ def main(genomes, config):
         for x, mario in enumerate(marios):
             if mario.y + mario.img.get_height() >= 730 or mario.y < 0:
                 marios.pop(x)
-                nets.pop(x)
+                #nets.pop(x)
                 ge.pop(x)
 
         if score > 30:
@@ -320,12 +392,6 @@ def main(genomes, config):
 
         base.move()
         draw_window(window, marios, goombas, base, score, GEN)
-
-    pygame.quit()
-    quit()
-
-
-# main()
 
 
 def run(config_path):
@@ -342,7 +408,6 @@ def run(config_path):
     # to determine our marios' fitness, we see how far it moves in the game
     #
     winner = p.run(main, 50)
-
 
 if __name__ == "__main__":
     local_dir = os.path.dirname(__file__)
