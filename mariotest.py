@@ -1,7 +1,6 @@
 import os
 import pygame
 
-
 pygame.font.init()
 
 WIN_WIDTH = 500
@@ -28,7 +27,6 @@ pygame.mixer.music.load(jump_sound)
 
 # MARIO class, mario moving
 class Mario:
-
     # constants
     IMGS = MARIO_IMGS
 
@@ -40,7 +38,6 @@ class Mario:
 
     # starting position of mario
     def __init__(self, x, y):
-
         self.x = x
         self.y = y
         self.tilt = 0
@@ -50,16 +47,51 @@ class Mario:
         self.img_count = 0
         self.img = self.IMGS[0]
         self.rect = self.img.get_rect()
+        self.width = self.img.get_width()
+        self.height = self.img.get_height()
 
-    # every single frame to move our mario
+        self.vel = 5
+        self.is_jumping = False
+        self.jump_vel = 10
+        self.jump_timer = 0
+        self.left = False
+        self.right = False
+        self.hitbox = pygame.Rect(self.x, self.y, self.width, self.height)
+
     def move(self):
-        self.tick_count += 1
 
-    def jump(self):
-        if self.jump_count == 10:
-            pygame.mixer.music.play()
-        self.jump_count -= 1
-        self.y -= (self.jump_count * abs(self.jump_count)) * 0.5
+        keys = pygame.key.get_pressed()
+
+        if keys[pygame.K_LEFT] and self.x > 0:
+            self.x -= self.vel
+            self.left = True
+            self.right = False
+        elif keys[pygame.K_RIGHT] and self.x < WIN_WIDTH - self.x:
+            self.x += self.vel
+            self.right = True
+            self.left = False
+        else:
+            self.right = False
+            self.left = False
+
+        if not self.is_jumping:
+            if keys[pygame.K_SPACE]:
+                self.is_jumping = True
+                self.jump_vel = 40
+                self.jump_timer = 0
+        else:
+            if self.jump_timer < 10:
+                self.y -= self.jump_vel
+                self.hitbox.move_ip(0, -self.jump_vel)
+                self.jump_vel -= 10
+                self.jump_timer += 1
+            else:
+                self.is_jumping = False
+                self.jump_vel = 15
+
+        if self.hitbox.bottom >= 730:
+            self.hitbox.bottom = 730
+            self.y = self.hitbox.bottom - self.height
 
     def draw(self, window):
 
@@ -98,7 +130,6 @@ class Mario:
 
 
 class Goomba:
-
     IMGS = GOOMBAS_IMGS
     MAX_ROTATION = 0
     ROT_VEL = 20
@@ -111,7 +142,7 @@ class Goomba:
         self.height = 0
         self.tilt = 0
         self.tick_count = 0
-        self.vel = 7
+        self.vel = 5
         self.bottom = 680
         self.img_count = 0
 
@@ -198,7 +229,6 @@ def draw_window(window, marios, goombas, base, score, gen):
 
 
 def main():
-
     clock = pygame.time.Clock()
     mario = [Mario(100, 680)]
 

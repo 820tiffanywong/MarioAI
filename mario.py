@@ -45,7 +45,7 @@ class Mario:
     ANIMATION_TIME = 5
 
     MAX_JUMP_COUNT = 10
-    JUMP_VEL = 18
+    #JUMP_VEL = 20
 
     # starting position of mario
     def __init__(self, x, y):
@@ -55,50 +55,41 @@ class Mario:
         self.tilt = 0
         self.tick_count = 0  # physics of mario
         self.vel = 5
-        self.height = self.y
+
         self.img_count = 0
         self.img = self.IMGS[0]
-        self.jump_count = 10
-        self.isJump = False
-        self.isRun = True
-        self.alive = True
         self.rect = self.img.get_rect()
-        #self.rect = pygame.Rect(self.x, self.y, self.img.get_width(), self.img.get_height())
+        self.width = self.img.get_width()
+        self.height = self.img.get_height()
 
-    def jump(self):
-        if self.jump_count == 10:
-            #jump_sound.play()
-            pygame.mixer.music.play()
-        self.jump_count -= 1
-        self.y -= (self.jump_count * abs(self.jump_count)) * 0.5
-        # if self.jumpCount < self.MAX_JUMP_COUNT:
-        #     self.vel = -self.JUMP_VEL
-        #     self.jumpCount += 1
-    #`````````````````````````````````
-        # if self.isJump:
-        #     if self.jumpCount >= -10:
-        #         neg = 1
-        #         if self.jumpCount < 0:
-        #             neg = -1
-        #         self.y -= self.jumpCount ** 2 * 0.1 * neg
-        #         self.jumpCount -= 1
-        #     else:
-        #         self.isJump = False
-        #         self.jumpCount = 10
-
-        # if self.jump:
-        #     self.mario.y -= self.jump_speed * 4
-        #     self.jump_speed -= 0.5
-        # if self.jump_speed <= -self.jump_speed:
-        #     self.jump = False
-        #     self.isRun = True
-        #     self.jump_speed = self.jump_speed
-
-    # every single frame to move our mario
+        self.vel = 5
+        self.is_jumping = False
+        self.jump_vel = 40
+        self.jump_timer = 0
+        self.left = False
+        self.right = False
+        self.hitbox = pygame.Rect(self.x, self.y, self.width, self.height)
 
     def move(self):
 
-        self.tick_count += 1
+        if self.is_jumping:
+            #pygame.mixer.music.play()
+            if self.jump_timer < 10:
+                self.y -= self.jump_vel
+                self.hitbox.move_ip(0, -self.jump_vel)
+                self.jump_vel -= 10
+                self.jump_timer += 1
+            else:
+                self.is_jumping = False
+                self.jump_vel = 10
+
+        if self.hitbox.bottom >= 730:
+            self.hitbox.bottom = 730
+            self.y = self.hitbox.bottom - self.height
+
+        if self.hitbox.bottom < 0:
+            self.hitbox.bottom = 0
+            self.y = self.hitbox.bottom - self.height
 
 
     def draw(self, window):
@@ -211,6 +202,9 @@ class Goomba:
 
         # get the overlap between the two masks at the given offset
         collision = goomba_mask.overlap(mario_mask, offset)
+        print(mario.height, self.x)
+        if mario.y < 670 or self.x < 143:
+            collision = False
         #collision = mario_mask.overlap(goomba_mask, offset)
 
         return collision
@@ -320,18 +314,16 @@ def main(genomes, config):
             break
         previous_jump = time.time()
         for x, mario in enumerate(marios):
+
             mario.move()
             ge[x].fitness += 0.1
-            #print(time.time() - previous_time)
 
-            if round(time.time() - previous_jump, 2) == round(np.random.uniform(), 2):
-                #if np.random.choice(3) == 1:
-                mario.jump()
-                #    previous_jump = time.time()
-            #input = (mario.y, goombas[goomba_ind].x, goombas[goomba_ind].x)
-            #THIS WORKS KIND OF
-            #input = (mario.y, abs(mario.y - goombas[goomba_ind].y), abs(mario.y - goombas[goomba_ind].x))
-            #input = (mario.y, mario.x, distanceMarGoom)
+            # prevent double-jumping
+            if not mario.is_jumping and int(np.random.choice(50)) == x:
+                mario.is_jumping = True
+                mario.jump_vel = 40
+                mario.jump_timer = 0
+
             input = (distanceMarGoom, player_bottom_y, player_top_y)
 
             output = nets[x].activate(input)
@@ -382,7 +374,10 @@ def main(genomes, config):
             goombas.remove(r)
 
         for x, mario in enumerate(marios):
-            if mario.y + mario.img.get_height() >= 730 or mario.y < 0:
+            if mario.y + mario.img.get_height() > 730 or mario.y < 0:
+                print(mario.y)
+                print(mario.img.get_height())
+                time.sleep(50)
                 marios.pop(x)
                 #nets.pop(x)
                 ge.pop(x)
